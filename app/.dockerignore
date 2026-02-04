@@ -1,0 +1,7 @@
+## .dockerignore 内容
+#node_modules
+#build
+#.gradle
+#.idea
+#*.log
+#.git

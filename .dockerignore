@@ -1,0 +1,11 @@
+# 忽略所有层级的 node_modules
+**/node_modules
+# 忽略所有层级的构建输出
+**/build
+
+**/.gradle
+# 忽略 IDE 和本地配置
+.idea
+.vscode
+*.log
+.git
