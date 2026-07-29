@@ -180,6 +180,19 @@ app:
     follow-up-count: ${APP_INTERVIEW_FOLLOW_UP_COUNT:1}
     evaluation:
       batch-size: ${APP_INTERVIEW_EVALUATION_BATCH_SIZE:8}
+
+  # 基于历史评估证据的 ReAct 弱项训练。
+  # 关键限制会在训练创建时复制进会话，运行中的训练不受后续配置变化影响。
+  training:
+    max-questions: ${APP_TRAINING_MAX_QUESTIONS:10}
+    max-consecutive-questions-per-topic: ${APP_TRAINING_MAX_CONSECUTIVE_PER_TOPIC:3}
+    max-follow-ups-per-main-question: ${APP_TRAINING_MAX_FOLLOW_UPS:2}
+    minimum-topic-count: ${APP_TRAINING_MINIMUM_TOPIC_COUNT:2}
+    minimum-evidence-per-topic: ${APP_TRAINING_MINIMUM_EVIDENCE_PER_TOPIC:2}
+    max-diagnostic-topics: ${APP_TRAINING_MAX_DIAGNOSTIC_TOPICS:5}
+    max-evidence-per-topic: ${APP_TRAINING_MAX_EVIDENCE_PER_TOPIC:5}
+    max-source-answers: ${APP_TRAINING_MAX_SOURCE_ANSWERS:200}
+
   resume:
     upload-dir: ${java.io.tmpdir}/ai-interview/resumes
     allowed-types:

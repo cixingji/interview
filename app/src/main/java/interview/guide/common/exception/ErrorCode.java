@@ -81,7 +81,17 @@ public enum ErrorCode {
     MODULE_NOT_FOUND(11008, "模块不存在"),
     VOICE_CONFIG_READ_FAILED(11009, "读取语音服务配置失败"),
     VOICE_CONFIG_WRITE_FAILED(11010, "写入语音服务配置失败"),
-    VOICE_CONFIG_TEST_FAILED(11011, "语音服务连通性测试失败");
+    VOICE_CONFIG_TEST_FAILED(11011, "语音服务连通性测试失败"),
+
+    // ========== ReAct训练模块错误 12xxx ==========
+    TRAINING_SESSION_NOT_FOUND(12001, "训练会话不存在"),
+    TRAINING_HISTORY_INSUFFICIENT(12002, "可用于训练的历史评估样本不足"),
+    TRAINING_SESSION_STATE_INVALID(12003, "训练会话状态不允许当前操作"),
+    TRAINING_TASK_FAILED(12004, "训练任务处理失败"),
+    TRAINING_TURN_NOT_FOUND(12005, "训练轮次不存在"),
+    TRAINING_ACTION_INVALID(12006, "训练动作不符合当前约束"),
+    TRAINING_SUMMARY_FAILED(12007, "训练总结生成失败"),
+    TRAINING_SNAPSHOT_FAILED(12008, "训练诊断快照保存失败");
 
     private final Integer code;
     private final String message;
