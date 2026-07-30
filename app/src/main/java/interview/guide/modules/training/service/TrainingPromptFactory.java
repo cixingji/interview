@@ -115,8 +115,17 @@ public class TrainingPromptFactory {
         "maxFollowUpsPerMainQuestion",
         context.maxFollowUpsPerMainQuestion()
     );
-    variables.put("currentTopicKey", valueOrNone(context.currentTopicKey()));
-    variables.put("topics", buildTopicSection(context.topics()));
+    variables.put(
+        "currentTopicKey",
+        wrapUntrustedData(
+            "training-current-topic",
+            safe(context.currentTopicKey())
+        )
+    );
+    variables.put(
+        "topics",
+        wrapUntrustedData("training-topics", buildTopicSection(context.topics()))
+    );
     variables.put("currentTurn", buildCurrentTurnSection(context.sourceTurn()));
     return variables;
   }
@@ -125,7 +134,7 @@ public class TrainingPromptFactory {
     return topics.stream()
         .map(topic -> "- "
             + safe(topic.displayName())
-            + " [" + topic.topicKey() + "]"
+            + " [" + safe(topic.topicKey()) + "]"
             + " status=" + topic.status()
             + " priority=" + topic.priorityRank()
             + " originalAverage=" + topic.originalAverageScore()
@@ -137,22 +146,16 @@ public class TrainingPromptFactory {
     if (turn == null) {
       return "这是首题任务，没有待评估回答。";
     }
-    String content = "topic=" + turn.topicKey()
+    String content = "topic=" + safe(turn.topicKey())
         + "\nquestion=" + safe(turn.question())
         + "\nuserAnswer=" + safe(turn.userAnswer());
-    return PromptSecurityConstants.DATA_BOUNDARY_INSTRUCTION
-        + "\n"
-        + promptSanitizer.wrapWithDelimiters("training-turn", content);
+    return wrapUntrustedData("training-turn", content);
   }
 
   private String safe(String value) {
     return value == null || value.isBlank()
         ? "无"
         : promptSanitizer.sanitize(value.trim());
-  }
-
-  private String valueOrNone(String value) {
-    return value == null || value.isBlank() ? "无" : value;
   }
 
   private String limitObservations(String observations) {
@@ -167,12 +170,19 @@ public class TrainingPromptFactory {
    * 规则有明确作用范围，也防止数据自行伪造固定结束标记。
    */
   private String wrapToolObservations(String observations) {
+    return wrapUntrustedData("training-tool-observations", observations);
+  }
+
+  /**
+   * 所有来自历史题目、用户回答或工具结果的可变文本都使用随机边界包装。
+   *
+   * <p>文本清洗用于移除已知注入模式，随机边界则提供独立的第二层语义隔离。即使运维临时关闭清洗器，
+   * system prompt 仍能明确识别哪些内容只是待分析数据，避免历史分类名或回答伪装成可信任务指令。
+   */
+  private String wrapUntrustedData(String label, String content) {
     return PromptSecurityConstants.DATA_BOUNDARY_INSTRUCTION
         + "\n"
-        + promptSanitizer.wrapWithDelimiters(
-            "training-tool-observations",
-            observations
-        );
+        + promptSanitizer.wrapWithDelimiters(label, content);
   }
 
   private PromptTemplate load(ResourceLoader resourceLoader, String location)

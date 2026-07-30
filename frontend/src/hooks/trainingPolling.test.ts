@@ -56,6 +56,23 @@ test('进入总结阶段但 SUMMARY 尚未出现时查询 latest', () => {
   );
 });
 
+test('并行恢复拿到旧会话和新任务时按较新的总结状态继续轮询', () => {
+  const completedAnswer = taskPoll({
+    task: {
+      ...taskPoll().task,
+      status: 'COMPLETED',
+      completedAt: '2026-07-30T10:01:00',
+    },
+    sessionStatus: 'SUMMARIZING',
+    terminal: true,
+  });
+
+  assert.deepEqual(
+    resolveTrainingPollTarget('IN_PROGRESS', completedAnswer),
+    { kind: 'LATEST' },
+  );
+});
+
 test('失败的 SUMMARY 停止轮询并等待用户触发重试', () => {
   const failedSummary = taskPoll({
     task: {

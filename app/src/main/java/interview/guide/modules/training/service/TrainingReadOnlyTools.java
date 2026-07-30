@@ -1,6 +1,7 @@
 package interview.guide.modules.training.service;
 
 import interview.guide.common.ai.PromptSanitizer;
+import interview.guide.common.ai.PromptSecurityConstants;
 import interview.guide.modules.training.model.TrainingEvidenceSnapshot;
 import interview.guide.modules.training.model.TrainingExecutionContext;
 import interview.guide.modules.training.model.TrainingExecutionContext.TopicSnapshot;
@@ -200,11 +201,20 @@ public final class TrainingReadOnlyTools {
   private String recordObservation(String toolName, String result) {
     /*
      * 技能参考资料也可能来自可编辑文件，不能因为它不是用户本轮回答就默认可信。
-     * 在写入观察列表和返回模型前统一清洗，保证四个工具走同一条安全出口。
+     * 在写入观察列表和返回模型前统一清洗并使用随机边界包装，保证四个工具走同一条安全出口。
+     *
+     * 工具返回值会先进入下一轮推理的 ToolResponseMessage，而不只是最终决策 Prompt。
+     * 因此必须在这里建立边界，不能只依赖 TrainingPromptFactory 对最终 observation 汇总的包装。
      */
     String sanitized = promptSanitizer.sanitize(result);
-    observations.add(toolName + ":\n" + sanitized);
-    return sanitized;
+    String wrapped = PromptSecurityConstants.DATA_BOUNDARY_INSTRUCTION
+        + "\n"
+        + promptSanitizer.wrapWithDelimiters(
+            "training-tool-" + toolName,
+            sanitized
+        );
+    observations.add(toolName + ":\n" + wrapped);
+    return wrapped;
   }
 
   private boolean hasToolBudget() {

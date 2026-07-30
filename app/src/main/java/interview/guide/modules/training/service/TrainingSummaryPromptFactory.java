@@ -52,14 +52,19 @@ public class TrainingSummaryPromptFactory {
       evidence = evidence.substring(0, MAX_TURN_EVIDENCE_CHARS)
           + "\n...（总结证据已截断）";
     }
-    String wrappedEvidence = PromptSecurityConstants.DATA_BOUNDARY_INSTRUCTION
-        + "\n"
-        + promptSanitizer.wrapWithDelimiters("training-summary-evidence", evidence);
+    String wrappedTopics = wrapUntrustedData(
+        "training-summary-topics",
+        formatTopics(context)
+    );
+    String wrappedEvidence = wrapUntrustedData(
+        "training-summary-evidence",
+        evidence
+    );
     return userTemplate.render(Map.of(
         "overallScore", context.overallScore(),
         "completedQuestionCount", context.completedQuestionCount(),
         "coveredTopicCount", context.coveredTopicCount(),
-        "topicResults", formatTopics(context),
+        "topicResults", wrappedTopics,
         "turnEvidence", wrappedEvidence
     ));
   }
@@ -72,7 +77,7 @@ public class TrainingSummaryPromptFactory {
 
   private String formatTopic(TrainingSummaryTopicResult topic) {
     return "- " + safe(topic.displayName())
-        + " [" + topic.topicKey() + "]"
+        + " [" + safe(topic.topicKey()) + "]"
         + "：历史诊断均分=" + topic.originalAverageScore()
         + "，本次训练均分=" + topic.trainingAverageScore()
         + "，完成题数=" + topic.answeredQuestionCount();
@@ -80,7 +85,7 @@ public class TrainingSummaryPromptFactory {
 
   private String formatTurn(TurnSummary turn) {
     return "轮次 " + turn.turnIndex()
-        + " | 主题 " + turn.topicKey()
+        + " | 主题 " + safe(turn.topicKey())
         + "\n问题: " + safe(turn.question())
         + "\n反馈: " + safe(turn.feedback());
   }
@@ -89,6 +94,16 @@ public class TrainingSummaryPromptFactory {
     return value == null || value.isBlank()
         ? "无"
         : promptSanitizer.sanitize(value.trim());
+  }
+
+  /**
+   * 总结上下文里的主题名、主题键、问题和反馈都可能间接来源于历史模型输出或用户输入。
+   * 统一使用不可预测的边界包装，确保它们只能作为总结证据，不能覆盖系统角色或输出约束。
+   */
+  private String wrapUntrustedData(String label, String content) {
+    return PromptSecurityConstants.DATA_BOUNDARY_INSTRUCTION
+        + "\n"
+        + promptSanitizer.wrapWithDelimiters(label, content);
   }
 
   private PromptTemplate load(ResourceLoader resourceLoader, String location)

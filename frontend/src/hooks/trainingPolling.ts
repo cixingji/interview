@@ -8,6 +8,14 @@ export type TrainingPollTarget =
   | { kind: 'LATEST' }
   | null;
 
+const SESSION_STATUS_RANK: Record<TrainingSessionStatus, number> = {
+  READY: 0,
+  IN_PROGRESS: 1,
+  SUMMARIZING: 2,
+  COMPLETED: 3,
+  FAILED: 4,
+};
+
 /**
  * 根据服务端公开状态决定下一次轮询目标。
  *
@@ -22,11 +30,30 @@ export function resolveTrainingPollTarget(
   if (taskPoll && !taskPoll.terminal) {
     return { kind: 'TASK', taskId: taskPoll.task.taskId };
   }
+  /*
+   * 会话详情与任务接口是两个独立 HTTP 请求，可能恰好跨过一次状态提交。生命周期只会
+   * 单向前进，因此选择阶段更靠后的状态，不能让较早返回的旧快照阻止总结任务轮询。
+   */
+  const effectiveSessionStatus = laterSessionStatus(
+    sessionStatus,
+    taskPoll?.sessionStatus,
+  );
   if (
-    sessionStatus === 'SUMMARIZING'
+    effectiveSessionStatus === 'SUMMARIZING'
     && (!taskPoll || taskPoll.task.taskType !== 'SUMMARY')
   ) {
     return { kind: 'LATEST' };
   }
   return null;
+}
+
+function laterSessionStatus(
+  first: TrainingSessionStatus | undefined,
+  second: TrainingSessionStatus | undefined,
+): TrainingSessionStatus | undefined {
+  if (!first) return second;
+  if (!second) return first;
+  return SESSION_STATUS_RANK[first] >= SESSION_STATUS_RANK[second]
+    ? first
+    : second;
 }

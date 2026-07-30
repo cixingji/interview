@@ -46,11 +46,22 @@ export function useTrainingSession(trainingId: string | undefined) {
     if (!silent) setLoading(true);
 
     try {
-      const [session, turns, taskPoll] = await Promise.all([
+      let [session, turns] = await Promise.all([
         trainingApi.getSession(trainingId),
         trainingApi.listTurns(trainingId),
-        trainingApi.getLatestTask(trainingId),
       ]);
+      const taskPoll = await trainingApi.getLatestTask(trainingId);
+
+      /*
+       * 最新任务查询发生在首批会话/轮次之后。如果它观察到不同的会话阶段，说明首批请求
+       * 跨过了一次原子状态提交；再读取一次会话和轮次，避免把两个时点的数据拼在一起。
+       */
+      if (taskPoll && taskPoll.sessionStatus !== session.status) {
+        [session, turns] = await Promise.all([
+          trainingApi.getSession(trainingId),
+          trainingApi.listTurns(trainingId),
+        ]);
+      }
       const summary = session.status === 'COMPLETED'
         ? await trainingApi.getSummary(trainingId)
         : null;
