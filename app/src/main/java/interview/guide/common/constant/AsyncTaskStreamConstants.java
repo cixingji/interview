@@ -194,7 +194,7 @@ public final class AsyncTaskStreamConstants {
      */
     public static final String FIELD_LLM_PROVIDER = "llmProvider";
 
-    // ========== ReAct 训练轮次 Stream 配置 ==========
+    // ========== ReAct 训练轮次与总结 Stream 配置 ==========
 
     public static final String TRAINING_TURN_STREAM_KEY = "training:turn:stream";
 

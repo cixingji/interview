@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 训练轮次异步任务的数据库状态机和事务边界。
+ * 训练轮次与总结异步任务共用的数据库状态机和事务边界。
  *
  * <p>这里不执行 LLM、Redis 或外部 HTTP 调用。写库完成后只发布应用内事件，Redis 投递由
  * AFTER_COMMIT 监听器完成。消费者同样通过本服务短事务推进状态，耗时的 ReAct 推理位于
@@ -267,8 +267,11 @@ public class TrainingTaskStateService {
     TrainingSessionEntity session = lockSession(normalizedTrainingId);
     TrainingTaskEntity task = taskRepository.findByTaskIdForUpdate(normalizedTaskId)
         .orElseThrow(() -> new BusinessException(ErrorCode.TRAINING_TASK_FAILED, "训练任务不存在"));
+    boolean sessionCanRetry = task.getTaskType() == TrainingTaskType.SUMMARY
+        ? session.getStatus() == TrainingSessionStatus.SUMMARIZING
+        : session.getStatus() == TrainingSessionStatus.IN_PROGRESS;
     if (!normalizedTrainingId.equals(task.getSession().getTrainingId())
-        || session.getStatus() != TrainingSessionStatus.IN_PROGRESS
+        || !sessionCanRetry
         || task.getStatus() != TrainingTaskStatus.FAILED) {
       throw new BusinessException(ErrorCode.TRAINING_SESSION_STATE_INVALID);
     }

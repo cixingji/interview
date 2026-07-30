@@ -25,7 +25,7 @@ import lombok.NoArgsConstructor;
 import lombok.ToString;
 
 /**
- * 训练轮次的数据库任务记录。
+ * 训练轮次或总结的数据库任务记录。
  *
  * <p>Redis 消息只携带 taskId 和 trainingId。消费者必须重新读取本实体并通过条件更新领取，
  * 因此重复投递、pending reclaim 或多个实例同时消费都不会重复执行同一个 QUEUED 任务。

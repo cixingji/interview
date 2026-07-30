@@ -14,10 +14,10 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Component;
 
 /**
- * ReAct 训练轮次 Stream 消费者。
+ * ReAct 训练 Stream 消费者。
  *
- * <p>消费者只负责可靠交付：解析 ID、原子领取、调用处理器和处理重试。第四步实现的
- * TrainingTurnTaskProcessor 才负责工具调用和动作决策，这样基础设施不会依赖推理细节。
+ * <p>消费者只负责可靠交付：解析 ID、原子领取、调用分发器和处理重试。消息不携带任务
+ * 类型，分发器会从数据库重新读取类型后选择轮次或总结 Runner。
  */
 @Slf4j
 @Component
@@ -45,7 +45,7 @@ public class TrainingTurnStreamConsumer
 
   @Override
   protected String taskDisplayName() {
-    return "训练轮次";
+    return "训练";
   }
 
   @Override
@@ -76,7 +76,7 @@ public class TrainingTurnStreamConsumer
     String taskId = data.get(AsyncTaskStreamConstants.FIELD_TASK_ID);
     String trainingId = data.get(AsyncTaskStreamConstants.FIELD_TRAINING_ID);
     if (taskId == null || taskId.isBlank() || trainingId == null || trainingId.isBlank()) {
-      log.warn("训练轮次消息缺少必要 ID，丢弃: messageId={}", messageId);
+      log.warn("训练消息缺少必要 ID，丢弃: messageId={}", messageId);
       return null;
     }
     return new TrainingTurnPayload(taskId, trainingId);
@@ -129,7 +129,7 @@ public class TrainingTurnStreamConsumer
   @Override
   protected void retryMessage(TrainingTurnPayload payload, int retryCount) {
     if (!stateService.resetForRetry(payload.taskId(), retryCount)) {
-      log.info("训练轮次任务状态已改变，不再自动重试: taskId={}", payload.taskId());
+      log.info("训练任务状态已改变，不再自动重试: taskId={}", payload.taskId());
       return;
     }
     producer.sendTrainingTask(new TrainingTaskQueuedEvent(

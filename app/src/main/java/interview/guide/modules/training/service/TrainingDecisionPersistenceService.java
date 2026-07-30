@@ -2,6 +2,7 @@ package interview.guide.modules.training.service;
 
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
+import interview.guide.modules.training.listener.TrainingTaskQueuedEvent;
 import interview.guide.modules.training.model.TrainingAction;
 import interview.guide.modules.training.model.TrainingActionState;
 import interview.guide.modules.training.model.TrainingActionState.TopicState;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +46,7 @@ public class TrainingDecisionPersistenceService {
   private final TrainingTopicRepository topicRepository;
   private final TrainingTurnRepository turnRepository;
   private final TrainingActionPolicy actionPolicy;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   public TrainingResolvedDecision apply(
@@ -91,6 +94,7 @@ public class TrainingDecisionPersistenceService {
           .filter(topic -> topic.getStatus() == TrainingTopicStatus.ACTIVE)
           .forEach(topic -> topic.setStatus(TrainingTopicStatus.COMPLETED));
       session.setStatus(TrainingSessionStatus.SUMMARIZING);
+      createSummaryTask(session);
       completeTask(task, sourceTurn);
       log.info("训练轮次决定结束会话: trainingId={}, taskId={}", trainingId, taskId);
       return resolved;
@@ -239,5 +243,29 @@ public class TrainingDecisionPersistenceService {
       sourceTurn.setFailureMessage(null);
       sourceTurn.setCompletedAt(now);
     }
+  }
+
+  /**
+   * 总结任务与 FINISH 决定在同一事务创建。事件由 AFTER_COMMIT 监听器投递，数据库回滚时
+   * Redis 不会看到孤立消息；deduplicationKey 也防止异常重放创建两个总结。
+   */
+  private void createSummaryTask(TrainingSessionEntity session) {
+    String deduplicationKey = "summary:" + session.getTrainingId();
+    if (taskRepository.findByDeduplicationKey(deduplicationKey).isPresent()) {
+      return;
+    }
+    TrainingTaskEntity summaryTask = TrainingTaskEntity.builder()
+        .taskId(UUID.randomUUID().toString())
+        .deduplicationKey(deduplicationKey)
+        .session(session)
+        .taskType(TrainingTaskType.SUMMARY)
+        .status(TrainingTaskStatus.QUEUED)
+        .build();
+    TrainingTaskEntity saved = taskRepository.save(summaryTask);
+    eventPublisher.publishEvent(new TrainingTaskQueuedEvent(
+        saved.getTaskId(),
+        session.getTrainingId(),
+        0
+    ));
   }
 }

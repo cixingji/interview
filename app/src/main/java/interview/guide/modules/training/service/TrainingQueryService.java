@@ -6,6 +6,7 @@ import interview.guide.modules.training.model.TrainingSessionStatus;
 import interview.guide.modules.training.model.TrainingTaskEntity;
 import interview.guide.modules.training.model.TrainingTaskPollResponse;
 import interview.guide.modules.training.model.TrainingTaskStatus;
+import interview.guide.modules.training.model.TrainingTaskType;
 import interview.guide.modules.training.model.TrainingTurnResponse;
 import interview.guide.modules.training.repository.TrainingSessionRepository;
 import interview.guide.modules.training.repository.TrainingTaskRepository;
@@ -76,7 +77,7 @@ public class TrainingQueryService {
         : responseMapper.toTurnResponse(task.getSourceTurn());
     TrainingTurnResponse nextTurn = findNextTurn(task, trainingId);
     boolean retryable = task.getStatus() == TrainingTaskStatus.FAILED
-        && task.getSession().getStatus() == TrainingSessionStatus.IN_PROGRESS;
+        && isRetryableSessionState(task);
     return new TrainingTaskPollResponse(
         responseMapper.toTaskDTO(task),
         task.getSession().getStatus(),
@@ -111,7 +112,8 @@ public class TrainingQueryService {
       TrainingTaskEntity task,
       String trainingId
   ) {
-    if (task.getStatus() != TrainingTaskStatus.COMPLETED) {
+    if (task.getStatus() != TrainingTaskStatus.COMPLETED
+        || task.getTaskType() == TrainingTaskType.SUMMARY) {
       return null;
     }
     int nextTurnIndex = task.getSourceTurn() == null
@@ -123,6 +125,12 @@ public class TrainingQueryService {
     )
         .map(responseMapper::toTurnResponse)
         .orElse(null);
+  }
+
+  private boolean isRetryableSessionState(TrainingTaskEntity task) {
+    return task.getTaskType() == TrainingTaskType.SUMMARY
+        ? task.getSession().getStatus() == TrainingSessionStatus.SUMMARIZING
+        : task.getSession().getStatus() == TrainingSessionStatus.IN_PROGRESS;
   }
 
   private String requireId(String value, String message) {

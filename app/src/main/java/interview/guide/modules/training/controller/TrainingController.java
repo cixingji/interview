@@ -6,11 +6,13 @@ import interview.guide.common.result.Result;
 import interview.guide.modules.training.model.CreateTrainingSessionRequest;
 import interview.guide.modules.training.model.SubmitTrainingAnswerRequest;
 import interview.guide.modules.training.model.TrainingSessionDTO;
+import interview.guide.modules.training.model.TrainingSummaryResponse;
 import interview.guide.modules.training.model.TrainingTaskDTO;
 import interview.guide.modules.training.model.TrainingTaskPollResponse;
 import interview.guide.modules.training.model.TrainingTurnResponse;
 import interview.guide.modules.training.service.TrainingQueryService;
 import interview.guide.modules.training.service.TrainingSessionService;
+import interview.guide.modules.training.service.TrainingSummaryQueryService;
 import interview.guide.modules.training.service.TrainingTaskStateService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -40,6 +42,7 @@ public class TrainingController {
   private final TrainingSessionService sessionService;
   private final TrainingTaskStateService taskStateService;
   private final TrainingQueryService queryService;
+  private final TrainingSummaryQueryService summaryQueryService;
 
   @PostMapping("/sessions")
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 30, timeUnit = TimeUnit.MINUTES)
@@ -121,5 +124,14 @@ public class TrainingController {
       @PathVariable String trainingId
   ) {
     return Result.success(queryService.listTurns(trainingId));
+  }
+
+  @GetMapping("/sessions/{trainingId}/summary")
+  @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 1_000, timeUnit = TimeUnit.MINUTES)
+  @RateLimit(dimension = RateLimit.Dimension.IP, count = 60, timeUnit = TimeUnit.MINUTES)
+  public Result<TrainingSummaryResponse> getSummary(
+      @PathVariable String trainingId
+  ) {
+    return Result.success(summaryQueryService.getSummary(trainingId));
   }
 }

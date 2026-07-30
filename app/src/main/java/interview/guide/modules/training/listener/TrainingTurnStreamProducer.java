@@ -8,7 +8,7 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /**
- * 训练轮次任务生产者。消息只携带稳定 ID，不携带回答、历史证据或模型上下文。
+ * 训练任务生产者。消息只携带稳定 ID，不携带任务类型、回答、历史证据或模型上下文。
  */
 @Component
 public class TrainingTurnStreamProducer
@@ -30,7 +30,7 @@ public class TrainingTurnStreamProducer
 
   @Override
   protected String taskDisplayName() {
-    return "训练轮次";
+    return "训练";
   }
 
   @Override

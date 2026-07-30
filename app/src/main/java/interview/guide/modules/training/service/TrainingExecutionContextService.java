@@ -47,6 +47,12 @@ public class TrainingExecutionContextService {
     if (!task.getStatus().isProcessing()) {
       throw new BusinessException(ErrorCode.TRAINING_SESSION_STATE_INVALID, "训练任务未处于处理状态");
     }
+    if (task.getTaskType() == TrainingTaskType.SUMMARY) {
+      throw new BusinessException(
+          ErrorCode.TRAINING_SESSION_STATE_INVALID,
+          "总结任务不能进入训练轮次执行器"
+      );
+    }
     if (task.getSession().getStatus() != TrainingSessionStatus.IN_PROGRESS) {
       throw new BusinessException(ErrorCode.TRAINING_SESSION_STATE_INVALID, "训练会话未处于进行状态");
     }

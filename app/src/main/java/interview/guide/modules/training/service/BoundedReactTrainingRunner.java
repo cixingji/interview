@@ -38,7 +38,7 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BoundedReactTrainingRunner implements TrainingTurnTaskProcessor {
+public class BoundedReactTrainingRunner {
 
   private static final int MAX_TOOL_ROUNDS = 3;
   private static final int MAX_LLM_CALLS = 4;
@@ -56,7 +56,6 @@ public class BoundedReactTrainingRunner implements TrainingTurnTaskProcessor {
   private final BeanOutputConverter<TrainingDecisionCandidate> outputConverter =
       new BeanOutputConverter<>(TrainingDecisionCandidate.class);
 
-  @Override
   public void process(String taskId) {
     TrainingExecutionContext context = contextService.load(taskId);
     TrainingActionState actionState = actionPolicy.from(context);
