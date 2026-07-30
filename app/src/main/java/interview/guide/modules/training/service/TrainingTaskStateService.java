@@ -46,6 +46,7 @@ public class TrainingTaskStateService {
   private final TrainingTaskRepository taskRepository;
   private final ApplicationEventPublisher eventPublisher;
   private final TrainingProperties properties;
+  private final TrainingResponseMapper responseMapper;
 
   /**
    * 为新会话创建首题任务。deduplicationKey 使网络重试只返回原任务，不会生成两个首题。
@@ -59,7 +60,7 @@ public class TrainingTaskStateService {
         deduplicationKey
     );
     if (existing.isPresent()) {
-      return toDTO(existing.get());
+      return responseMapper.toTaskDTO(existing.get());
     }
     if (session.getStatus() != TrainingSessionStatus.READY) {
       throw new BusinessException(ErrorCode.TRAINING_SESSION_STATE_INVALID);
@@ -77,7 +78,7 @@ public class TrainingTaskStateService {
         .build();
     TrainingTaskEntity saved = taskRepository.save(task);
     publishAfterCommit(saved, 0);
-    return toDTO(saved);
+    return responseMapper.toTaskDTO(saved);
   }
 
   /**
@@ -103,7 +104,7 @@ public class TrainingTaskStateService {
         deduplicationKey
     );
     if (existing.isPresent()) {
-      return toDTO(existing.get());
+      return responseMapper.toTaskDTO(existing.get());
     }
     if (session.getStatus() != TrainingSessionStatus.IN_PROGRESS
         || turn.getStatus() != TrainingTurnStatus.WAITING_ANSWER) {
@@ -125,7 +126,7 @@ public class TrainingTaskStateService {
         .build();
     TrainingTaskEntity saved = taskRepository.save(task);
     publishAfterCommit(saved, 0);
-    return toDTO(saved);
+    return responseMapper.toTaskDTO(saved);
   }
 
   @Transactional(readOnly = true)
@@ -137,7 +138,7 @@ public class TrainingTaskStateService {
     if (!normalizedTrainingId.equals(task.getSession().getTrainingId())) {
       throw new BusinessException(ErrorCode.TRAINING_TASK_FAILED, "训练任务不存在");
     }
-    return toDTO(task);
+    return responseMapper.toTaskDTO(task);
   }
 
   /**
@@ -274,7 +275,7 @@ public class TrainingTaskStateService {
     resetToQueued(task);
     task.setRetryCount(0);
     publishAfterCommit(task, 0);
-    return toDTO(task);
+    return responseMapper.toTaskDTO(task);
   }
 
   /**
@@ -385,21 +386,6 @@ public class TrainingTaskStateService {
         task.getTaskId(),
         task.getSession().getTrainingId(),
         retryCount
-    );
-  }
-
-  private TrainingTaskDTO toDTO(TrainingTaskEntity task) {
-    return new TrainingTaskDTO(
-        task.getTaskId(),
-        task.getSession().getTrainingId(),
-        task.getSourceTurn() == null ? null : task.getSourceTurn().getTurnId(),
-        task.getTaskType(),
-        task.getStatus(),
-        task.getAttemptCount(),
-        task.getSafeErrorMessage(),
-        task.getCreatedAt(),
-        task.getUpdatedAt(),
-        task.getCompletedAt()
     );
   }
 

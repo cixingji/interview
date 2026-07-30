@@ -16,6 +16,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface TrainingSessionRepository extends JpaRepository<TrainingSessionEntity, Long> {
 
+  boolean existsByTrainingId(String trainingId);
+
   /**
    * 连同主题快照一次加载，供会话详情和后续动作策略使用，避免逐主题查询。
    */

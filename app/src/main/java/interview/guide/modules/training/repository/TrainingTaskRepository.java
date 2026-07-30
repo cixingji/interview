@@ -31,6 +31,11 @@ public interface TrainingTaskRepository extends JpaRepository<TrainingTaskEntity
   @EntityGraph(attributePaths = {"session", "sourceTurn"})
   Optional<TrainingTaskEntity> findByDeduplicationKey(String deduplicationKey);
 
+  @EntityGraph(attributePaths = {"session", "sourceTurn"})
+  Optional<TrainingTaskEntity> findFirstBySession_TrainingIdOrderByIdDesc(
+      String trainingId
+  );
+
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT t FROM TrainingTaskEntity t WHERE t.taskId = :taskId")
   Optional<TrainingTaskEntity> findByTaskIdForUpdate(@Param("taskId") String taskId);

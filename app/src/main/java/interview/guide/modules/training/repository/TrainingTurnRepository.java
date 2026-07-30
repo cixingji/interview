@@ -22,6 +22,11 @@ public interface TrainingTurnRepository extends JpaRepository<TrainingTurnEntity
 
   List<TrainingTurnEntity> findBySession_TrainingIdOrderByTurnIndexAsc(String trainingId);
 
+  Optional<TrainingTurnEntity> findBySession_TrainingIdAndTurnIndex(
+      String trainingId,
+      Integer turnIndex
+  );
+
   /**
    * 提交回答或手动重试前锁定目标轮次。查询同时限定 trainingId，防止跨会话猜测 turnId。
    */
