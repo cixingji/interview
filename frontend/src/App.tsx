@@ -24,6 +24,7 @@ const VoiceInterviewPage = lazy(() => import('./pages/VoiceInterviewPage'));
 const VoiceInterviewEvaluationPage = lazy(() => import('./pages/VoiceInterviewEvaluationPage'));
 const InterviewSchedulePage = lazy(() => import('./pages/InterviewSchedulePage'));
 const InterviewHubPage = lazy(() => import('./pages/InterviewHubPage'));
+const TrainingPage = lazy(() => import('./pages/TrainingPage'));
 const SettingsPage = lazy(() => import('./pages/SettingsPage'));
 const InterviewDetailPanel = lazy(() => import('./components/InterviewDetailPanel'));
 
@@ -186,6 +187,10 @@ function App() {
 
             {/* 面试中心 */}
             <Route path="interview-hub" element={<InterviewHubPage />} />
+
+            {/* ReAct 弱项训练 */}
+            <Route path="training" element={<TrainingPage />} />
+            <Route path="training/:trainingId" element={<TrainingPage />} />
 
             {/* 面试记录列表 */}
             <Route path="interviews" element={<InterviewHistoryWrapper />} />
