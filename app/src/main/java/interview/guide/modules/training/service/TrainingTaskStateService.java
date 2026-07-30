@@ -210,6 +210,9 @@ public class TrainingTaskStateService {
   @Transactional
   public boolean markCompleted(String taskId) {
     TrainingTaskEntity task = taskRepository.findByTaskIdForUpdate(taskId).orElse(null);
+    if (task != null && task.getStatus() == TrainingTaskStatus.COMPLETED) {
+      return true;
+    }
     if (task == null || !task.getStatus().isProcessing()) {
       return false;
     }

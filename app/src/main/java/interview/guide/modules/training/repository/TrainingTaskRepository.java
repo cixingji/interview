@@ -32,13 +32,7 @@ public interface TrainingTaskRepository extends JpaRepository<TrainingTaskEntity
   Optional<TrainingTaskEntity> findByDeduplicationKey(String deduplicationKey);
 
   @Lock(LockModeType.PESSIMISTIC_WRITE)
-  @Query("""
-      SELECT t
-      FROM TrainingTaskEntity t
-      JOIN FETCH t.session
-      LEFT JOIN FETCH t.sourceTurn
-      WHERE t.taskId = :taskId
-      """)
+  @Query("SELECT t FROM TrainingTaskEntity t WHERE t.taskId = :taskId")
   Optional<TrainingTaskEntity> findByTaskIdForUpdate(@Param("taskId") String taskId);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)

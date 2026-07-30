@@ -29,9 +29,7 @@ public interface TrainingTurnRepository extends JpaRepository<TrainingTurnEntity
   @Query("""
       SELECT t
       FROM TrainingTurnEntity t
-      JOIN FETCH t.session s
-      LEFT JOIN FETCH t.parentTurn
-      WHERE s.trainingId = :trainingId
+      WHERE t.session.trainingId = :trainingId
         AND t.turnId = :turnId
       """)
   Optional<TrainingTurnEntity> findByTrainingIdAndTurnIdForUpdate(
