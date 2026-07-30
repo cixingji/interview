@@ -8,6 +8,7 @@ import type {
   TrainingTaskPollResponse,
   TrainingTurn,
 } from '../types/training';
+import { resolveTrainingPollTarget } from './trainingPolling';
 
 const POLL_INTERVAL_MS = 1500;
 
@@ -83,18 +84,17 @@ export function useTrainingSession(trainingId: string | undefined) {
     };
   }, [loadState, trainingId]);
 
-  const waitingForSummaryTask = state.session?.status === 'SUMMARIZING'
-    && (!state.taskPoll || state.taskPoll.task.taskType !== 'SUMMARY');
-  const shouldPoll = Boolean(
-    trainingId
-      && (
-        (state.taskPoll && !state.taskPoll.terminal)
-        || waitingForSummaryTask
-      ),
+  const pollTarget = resolveTrainingPollTarget(
+    state.session?.status,
+    state.taskPoll,
   );
+  const pollTargetKind = pollTarget?.kind;
+  const pollTargetTaskId = pollTarget?.kind === 'TASK'
+    ? pollTarget.taskId
+    : null;
 
   useEffect(() => {
-    if (!trainingId || !shouldPoll) return;
+    if (!trainingId || !pollTargetKind) return;
 
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
@@ -111,8 +111,8 @@ export function useTrainingSession(trainingId: string | undefined) {
          * 普通任务处理中固定轮询当前 taskId；当回答任务已经结束而会话进入总结阶段时，
          * 改查 latest，让异步创建的 SUMMARY 任务出现后能被接管，不会卡在旧任务上。
          */
-        const nextPoll = state.taskPoll && !state.taskPoll.terminal
-          ? await trainingApi.pollTask(trainingId, state.taskPoll.task.taskId)
+        const nextPoll = pollTargetKind === 'TASK'
+          ? await trainingApi.pollTask(trainingId, pollTargetTaskId!)
           : await trainingApi.getLatestTask(trainingId);
 
         if (cancelled) return;
@@ -144,10 +144,9 @@ export function useTrainingSession(trainingId: string | undefined) {
     };
   }, [
     loadState,
-    shouldPoll,
+    pollTargetKind,
+    pollTargetTaskId,
     state.session?.status,
-    state.taskPoll?.task.taskId,
-    state.taskPoll?.terminal,
     trainingId,
   ]);
 

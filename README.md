@@ -94,6 +94,15 @@ InterviewGuide 是一个集成了简历分析、模拟面试（文字 + 语音�
 - **报告一键导出**：支持异步生成并导出详细的 PDF 模拟面试评估报告。
 - **面试中心入口**：面试中心页整合文字面试和语音面试入口，支持继续面试和重新面试。
 
+### ReAct 弱项训练模块
+
+- **历史诊断快照**：从已完成评估的面试回答中识别低分主题，可按简历和 Skill 限定证据范围。
+- **有界 ReAct 循环**：单轮最多 3 轮只读工具调用和 4 次模型调用，动作必须通过服务端白名单校验。
+- **自适应训练路径**：根据回答选择追问、巩固、换题或切换主题，同时受总题数、追问数和主题覆盖约束。
+- **可靠异步执行**：复用 Redis Stream 任务模板，以数据库为状态事实来源，支持幂等提交、超时恢复和显式重试。
+- **可信训练总结**：单题内部评分不对外展示，服务端聚合总分和主题分，LLM 只负责生成经过校验的总结文字。
+- **刷新恢复**：训练页面可通过 URL 中的 `trainingId` 恢复会话、轮次、最新任务和最终报告。
+
 ### 面试安排模块
 
 - **邀请解析**：规则 + AI 双引擎，支持飞书/腾讯会议/Zoom 格式，自动提取公司、岗位、时间、会议链接
@@ -244,6 +253,7 @@ interview-guide/
 │   │       ├── knowledgebase/        # 知识库模块
 │   │       ├── llmprovider/          # 多模型 Provider 与语音配置
 │   │       ├── resume/               # 简历模块
+│   │       ├── training/             # ReAct 弱项训练、异步任务与聚合总结
 │   │       └── voiceinterview/       # 语音面试模块
 │   └── src/main/resources/
 │       ├── application.yml           # 应用配置
@@ -352,11 +362,16 @@ docker compose -f docker-compose.dev.yml up -d --force-recreate postgres redis
 
 | 服务         | 地址             | 账号            | 密码            |
 | ------------ | ---------------- | --------------- | --------------- |
-| PostgreSQL   | `localhost:5432` | `postgres`      | `123456`        |
+| PostgreSQL   | `localhost:5432` | `postgres`      | `.env` 中的 `POSTGRES_PASSWORD`（示例为 `password`） |
 | Redis        | `localhost:6379` | -               | -               |
 | RustFS 控制台 | `localhost:9001` | `rustfsadmin`   | `rustfsadmin`   |
 
 > **注意**：应用启动时会自动检查并创建 `interview-guide` Bucket。使用 `docker-compose.dev.yml` + `:app:bootRun` 时，请确保 `.env` 中的 `APP_STORAGE_ACCESS_KEY` / `APP_STORAGE_SECRET_KEY` 与 RustFS 账号一致，例如都设为 `rustfsadmin`。如果本地已有 MinIO 或其他 S3 兼容存储，也可以直接使用，在 `.env` 中修改 `APP_STORAGE_*` 配置即可。
+
+> **PostgreSQL 密码说明**：按上面的步骤复制 `.env.example` 后，开发 Compose 和后端都会使用
+> `POSTGRES_PASSWORD=password`。只有不创建 `.env` 时，`docker-compose.dev.yml` 与应用才共同
+> 使用回退值 `123456`。已有 PostgreSQL 数据卷会保留首次初始化密码，修改变量后若认证失败，
+> 应恢复原密码或明确重建开发数据卷。
 
 > **IDEA Docker Debug 提示**：如果在 macOS 上使用 IntelliJ IDEA 的 Docker 调试方式启动后端，遇到 `mounts denied: The path /Applications/IntelliJ IDEA.app/Contents/lib is not shared from the host`，请在 Docker Desktop 的 `Settings -> Resources -> File Sharing` 中加入 `/Applications/IntelliJ IDEA.app/Contents/lib`（或整个 `/Applications/IntelliJ IDEA.app`）以及当前项目目录，然后重启 Docker/IDEA 后再运行。普通 `./gradlew :app:bootRun` 和 `docker compose` 启动不需要这个额外共享路径。
 

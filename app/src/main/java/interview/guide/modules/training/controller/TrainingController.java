@@ -14,6 +14,7 @@ import interview.guide.modules.training.service.TrainingQueryService;
 import interview.guide.modules.training.service.TrainingSessionService;
 import interview.guide.modules.training.service.TrainingSummaryQueryService;
 import interview.guide.modules.training.service.TrainingTaskStateService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -45,6 +46,10 @@ public class TrainingController {
   private final TrainingSummaryQueryService summaryQueryService;
 
   @PostMapping("/sessions")
+  @Operation(
+      summary = "创建弱项训练会话",
+      description = "根据已评估的历史回答固化诊断快照，不调用 LLM；简历范围和模型供应商可选"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 30, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 5, timeUnit = TimeUnit.MINUTES)
   public Result<TrainingSessionDTO> createSession(
@@ -58,6 +63,10 @@ public class TrainingController {
   }
 
   @GetMapping("/sessions/{trainingId}")
+  @Operation(
+      summary = "查询训练会话",
+      description = "返回会话进度和公开主题摘要，不返回历史证据或内部评分"
+  )
   public Result<TrainingSessionDTO> getSession(
       @PathVariable String trainingId
   ) {
@@ -65,6 +74,10 @@ public class TrainingController {
   }
 
   @PostMapping("/sessions/{trainingId}/start")
+  @Operation(
+      summary = "启动训练",
+      description = "幂等创建首题异步任务并立即返回 taskId，客户端随后轮询任务状态"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 60, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 10, timeUnit = TimeUnit.MINUTES)
   public Result<TrainingTaskDTO> startTraining(
@@ -74,6 +87,10 @@ public class TrainingController {
   }
 
   @PostMapping("/sessions/{trainingId}/turns/{turnId}/answers")
+  @Operation(
+      summary = "提交本轮回答",
+      description = "保存回答并幂等创建评估决策任务，不在 HTTP 请求内等待 LLM"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 300, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 30, timeUnit = TimeUnit.MINUTES)
   public Result<TrainingTaskDTO> submitAnswer(
@@ -89,6 +106,10 @@ public class TrainingController {
   }
 
   @GetMapping("/sessions/{trainingId}/tasks/{taskId}")
+  @Operation(
+      summary = "轮询指定训练任务",
+      description = "返回粗粒度处理阶段、本轮公开反馈和下一题，不暴露 ReAct 内部推理"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 3_000, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 180, timeUnit = TimeUnit.MINUTES)
   public Result<TrainingTaskPollResponse> pollTask(
@@ -99,6 +120,10 @@ public class TrainingController {
   }
 
   @GetMapping("/sessions/{trainingId}/tasks/latest")
+  @Operation(
+      summary = "查询会话最新任务",
+      description = "用于页面刷新恢复和等待异步总结任务；尚未开始的 READY 会话返回空数据"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 3_000, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 180, timeUnit = TimeUnit.MINUTES)
   public Result<TrainingTaskPollResponse> getLatestTask(
@@ -108,6 +133,10 @@ public class TrainingController {
   }
 
   @PostMapping("/sessions/{trainingId}/tasks/{taskId}/retry")
+  @Operation(
+      summary = "重试失败任务",
+      description = "仅允许重试后端判定为 retryable 且仍符合会话状态约束的任务"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 60, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 10, timeUnit = TimeUnit.MINUTES)
   public Result<TrainingTaskDTO> retryTask(
@@ -118,6 +147,10 @@ public class TrainingController {
   }
 
   @GetMapping("/sessions/{trainingId}/turns")
+  @Operation(
+      summary = "查询训练轮次",
+      description = "按题目顺序返回公开问题、回答、反馈和参考答案，不包含单题内部评分"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 2_000, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 120, timeUnit = TimeUnit.MINUTES)
   public Result<List<TrainingTurnResponse>> listTurns(
@@ -127,6 +160,10 @@ public class TrainingController {
   }
 
   @GetMapping("/sessions/{trainingId}/summary")
+  @Operation(
+      summary = "查询训练总结",
+      description = "总结生成期间返回空数据，完成后返回服务端聚合总分、主题分和改进建议"
+  )
   @RateLimit(dimension = RateLimit.Dimension.GLOBAL, count = 1_000, timeUnit = TimeUnit.MINUTES)
   @RateLimit(dimension = RateLimit.Dimension.IP, count = 60, timeUnit = TimeUnit.MINUTES)
   public Result<TrainingSummaryResponse> getSummary(
