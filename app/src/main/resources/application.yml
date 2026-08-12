@@ -192,6 +192,10 @@ app:
     max-diagnostic-topics: ${APP_TRAINING_MAX_DIAGNOSTIC_TOPICS:5}
     max-evidence-per-topic: ${APP_TRAINING_MAX_EVIDENCE_PER_TOPIC:5}
     max-source-answers: ${APP_TRAINING_MAX_SOURCE_ANSWERS:200}
+    queued-stale-duration: ${APP_TRAINING_QUEUED_STALE_DURATION:2m}
+    processing-stale-duration: ${APP_TRAINING_PROCESSING_STALE_DURATION:20m}
+    recovery-interval: ${APP_TRAINING_RECOVERY_INTERVAL:1m}
+    recovery-batch-size: ${APP_TRAINING_RECOVERY_BATCH_SIZE:50}
 
   resume:
     upload-dir: ${java.io.tmpdir}/ai-interview/resumes

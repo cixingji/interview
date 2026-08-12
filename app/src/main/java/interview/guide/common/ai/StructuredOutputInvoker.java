@@ -68,12 +68,50 @@ public class StructuredOutputInvoker {
         String logContext,
         Logger log
     ) {
+        return invoke(
+            chatClient,
+            systemPromptWithFormat,
+            userPrompt,
+            outputConverter,
+            errorCode,
+            errorPrefix,
+            logContext,
+            log,
+            maxAttempts
+        );
+    }
+
+    /**
+     * 在全局结构化重试上限内进一步限制本次调用次数。
+     *
+     * <p>有界 Agent 会把工具分析和最终结构化输出共享同一个 LLM 调用预算，因此最后一步
+     * 只能使用剩余次数。普通调用继续使用上面的兼容重载，不受影响。
+     */
+    public <T> T invoke(
+        ChatClient chatClient,
+        String systemPromptWithFormat,
+        String userPrompt,
+        BeanOutputConverter<T> outputConverter,
+        ErrorCode errorCode,
+        String errorPrefix,
+        String logContext,
+        Logger log,
+        int attemptLimit
+    ) {
+        /*
+         * attemptLimit 是调用方剩余的硬预算，不能用 Math.max(1, ...) 悄悄突破。
+         * 普通调用会通过兼容重载传入全局 maxAttempts，因此只影响显式预算调用者。
+         */
+        if (attemptLimit < 1) {
+            throw new BusinessException(errorCode, errorPrefix);
+        }
         long startNanos = System.nanoTime();
         String contextTag = normalizeContextTag(logContext);
         String securedSystemPrompt = systemPromptWithFormat
             + PromptSecurityConstants.ANTI_INJECTION_INSTRUCTION;
+        int effectiveMaxAttempts = Math.min(maxAttempts, attemptLimit);
         Exception lastError = null;
-        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+        for (int attempt = 1; attempt <= effectiveMaxAttempts; attempt++) {
             String attemptSystemPrompt = attempt == 1
                 ? securedSystemPrompt
                 : buildRetrySystemPrompt(securedSystemPrompt, lastError);
@@ -86,21 +124,22 @@ public class StructuredOutputInvoker {
             } catch (Exception e) {
                 lastError = e;
                 recordAttempt(contextTag, STATUS_FAILURE);
-                if (attempt < maxAttempts) {
+                if (attempt < effectiveMaxAttempts) {
                     log.warn("{}结构化解析失败，准备重试: attempt={}/{}, error={}",
-                        logContext, attempt, maxAttempts, e.getMessage());
+                        logContext, attempt, effectiveMaxAttempts, e.getMessage());
                 } else {
                     log.error("{}结构化解析失败，已达最大重试次数: attempts={}, error={}",
-                        logContext, maxAttempts, e.getMessage());
+                        logContext, effectiveMaxAttempts, e.getMessage());
                 }
             }
         }
 
         recordInvocation(contextTag, STATUS_FAILURE, startNanos);
-        throw new BusinessException(
-            errorCode,
-            errorPrefix + (lastError != null ? lastError.getMessage() : "unknown")
-        );
+        /*
+         * 解析器异常可能包含原始模型输出、Schema 片段或供应商响应。详细原因只留在服务端
+         * 日志，外部 Result 只返回调用方提供的稳定提示，避免泄露模型原文和内部结构。
+         */
+        throw new BusinessException(errorCode, errorPrefix);
     }
 
     private <T> T callStructuredOutput(

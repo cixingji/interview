@@ -22,6 +22,11 @@ public final class AsyncTaskStreamConstants {
      */
     public static final String FIELD_CONTENT = "content";
 
+    /**
+     * ReAct 训练会话 ID。
+     */
+    public static final String FIELD_TRAINING_ID = "trainingId";
+
     // ========== 通用消费者配置 ==========
 
     /**
@@ -188,4 +193,12 @@ public final class AsyncTaskStreamConstants {
      * LLM Provider字段
      */
     public static final String FIELD_LLM_PROVIDER = "llmProvider";
+
+    // ========== ReAct 训练轮次与总结 Stream 配置 ==========
+
+    public static final String TRAINING_TURN_STREAM_KEY = "training:turn:stream";
+
+    public static final String TRAINING_TURN_GROUP_NAME = "training-turn-group";
+
+    public static final String TRAINING_TURN_CONSUMER_PREFIX = "training-turn-consumer-";
 }
